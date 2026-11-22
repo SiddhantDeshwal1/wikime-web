@@ -79,7 +79,7 @@ export interface ManualNoteDTO {
 {
   "user_id": "usr_98a7f6c2",
   "source_url": null,
-  "raw_text": "I prefer using Shadcn UI over standard Tailwind CSS components for clean dashboard architecture.",
+  "raw_text": "I prefer using decoupled presentation components with strict DTO typing for client architecture.",
   "content_type": "manual_note",
   "client_timestamp": "2026-10-11T13:31:00Z"
 }
@@ -257,10 +257,10 @@ event: token
 data: {"token": " saved notes,"}
 
 event: citation
-data: {"item_id": "mem_01", "title": "Frontend Library Preference", "url": null, "similarity": 0.94, "snippet": "I prefer using Shadcn UI over standard Tailwind CSS components for clean dashboard architecture."}
+data: {"item_id": "mem_01", "title": "Client Architecture Preference", "url": null, "similarity": 0.94, "snippet": "I prefer using decoupled presentation components with strict DTO typing for client architecture."}
 
 event: token
-data: {"token": " you strongly prefer Shadcn UI."}
+data: {"token": " you strongly prefer decoupled presentation components."}
 
 event: done
 data: {"status": "complete", "total_tokens": 42, "finish_reason": "stop"}
@@ -268,14 +268,14 @@ data: {"status": "complete", "total_tokens": 42, "finish_reason": "stop"}
 
 #### Tool-Call / Confirmation Handshake Stream Sample
 
-When a user instructs the assistant to perform a destructive operation (e.g., *"Forget my notes about React Table"*):
+When a user instructs the assistant to perform a destructive operation (e.g., *"Forget my notes about Data Grid Configuration"*):
 
 ```http
 event: token
 data: {"token": "I will proceed with removing that record from your memory."}
 
 event: confirm_action
-data: {"action_id": "act_991", "tool_name": "delete_memory", "message": "Delete note: 'Configuring React Table'?", "target_item_id": "mem_45"}
+data: {"action_id": "act_991", "tool_name": "delete_memory", "message": "Delete note: 'Configuring Data Grid'?", "target_item_id": "mem_45"}
 
 event: done
 data: {"status": "awaiting_confirmation", "action_id": "act_991"}
@@ -296,20 +296,20 @@ data: {"status": "awaiting_confirmation", "action_id": "act_991"}
         "conflict_id": "cnf_3301",
         "conflict_type": "HIGH_PARTIAL_OVERLAP",
         "similarity_score": 0.89,
-        "reason": "89% semantic match detected with existing note 'Tailwind Setup Guide'",
+        "reason": "89% semantic match detected with existing note 'Event Gateway Ingress Guide'",
         "detected_at": "2026-10-11T14:10:00Z",
         "existing_record": {
           "item_id": "mem_88",
-          "title": "Tailwind Setup Guide",
-          "summary": "Notes on setting up Tailwind CSS with PostCSS.",
-          "content": "Install tailwindcss postcss autoprefixer...",
+          "title": "Event Gateway Ingress Guide",
+          "summary": "Notes on setting up SSE gateway ingress with proxy buffering.",
+          "content": "Configure gateway proxy buffering off and set chunked transfer encoding...",
           "indexed_at": "2026-09-01T10:00:00Z"
         },
         "incoming_record": {
           "item_id": "mem_99",
-          "title": "Tailwind v4 Setup",
-          "summary": "Notes on setting up Tailwind CSS v4 using @tailwindcss/vite.",
-          "content": "Install @tailwindcss/vite and configure vite plugin...",
+          "title": "SSE Gateway Protocol v2",
+          "summary": "Notes on setting up event-stream response handlers with heartbeat pinging.",
+          "content": "Implement 15-second keep-alive comments in event stream to prevent client timeouts...",
           "submitted_at": "2026-10-11T14:09:50Z"
         }
       }

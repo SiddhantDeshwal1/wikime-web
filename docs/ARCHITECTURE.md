@@ -2,27 +2,27 @@
 
 **Presentation Edge & Web Client Architecture**
 
-This document specifies the technical architecture, component hierarchy, data-flow sequences, and boundary constraints for `wikime-web` — the Next.js 15 client application powering the WikiMe second-brain experience.
+This document specifies the technical architecture, component hierarchy, data-flow sequences, and boundary constraints for `wikime-web` — the client web application powering the WikiMe second-brain experience.
 
 ---
 
 ## 1. High-Level Architectural Overview
 
-`wikime-web` operates strictly at the **Presentation Edge** of the WikiMe ecosystem. It provides an ergonomic, responsive user experience across desktop and mobile browsers while delegating all computational heavy lifting, scraping, vector search, and AI synthesis to the backend services via the central API Gateway.
+`wikime-web` operates strictly at the **Presentation Edge** of the WikiMe ecosystem. It provides an ergonomic, responsive user experience across desktop and mobile browsers while delegating all computational heavy lifting, scraping, vector search, and AI synthesis to backend services via the central API Gateway.
 
 ```mermaid
 graph TD
     subgraph Browser ["Client Presentation Edge (wikime-web)"]
-        UI_Shell["Next.js App Router Layout"]
+        UI_Shell["Application Shell & Router Layout"]
         QuickCapture["QuickCaptureBar<br/>(Lean Omnibar)"]
         ChatStream["ChatStreamView<br/>(Markdown / LaTeX / SSE)"]
         ConflictDrawer["ConflictResolutionDrawer<br/>(Side-by-Side Reconciliation)"]
         TriageDash["TriageDashboard<br/>(Scrape Recovery View)"]
-        AuthStore["BrowserAuthStore<br/>(Zustand / JWT / Session)"]
+        AuthStore["BrowserAuthStore<br/>(Session & Auth Store)"]
     end
 
     subgraph Gateway ["WikiMe API Gateway (:8000)"]
-        APIGateway["FastAPI / Node.js Ingress<br/>/api/v1/*"]
+        APIGateway["FastAPI / Ingress Gateway<br/>/api/v1/*"]
     end
 
     QuickCapture -->|"POST /api/v1/ingest (Fire-and-Forget)"| APIGateway
@@ -30,7 +30,7 @@ graph TD
     ChatStream -->|"POST /api/v1/actions/:id/confirm"| APIGateway
     ConflictDrawer -->|"GET /api/v1/conflicts<br/>POST /api/v1/conflicts/:id/resolve"| APIGateway
     TriageDash -->|"GET /api/v1/dead-reports<br/>POST /api/v1/dead-reports/:id/resolve"| APIGateway
-    AuthStore -.->|"Bearer Token Injection"| APIGateway
+    AuthStore -.->|"Bearer Token & Context Headers"| APIGateway
 ```
 
 ---
@@ -58,7 +58,7 @@ sequenceDiagram
     loop Real-Time Server-Sent Events (SSE)
         GW-->>View: event: token (data: {"token": "The"})
         View->>View: Append token to virtual message buffer
-        GW-->>View: event: citation (data: {"title": "Shadcn Patterns", "item_id": "...", "similarity": 0.94})
+        GW-->>View: event: citation (data: {"title": "Architecture Patterns", "item_id": "...", "similarity": 0.94})
         View->>View: Register citation card in collapsible tray
     end
     opt Tool Call / Action Interception
@@ -73,10 +73,10 @@ sequenceDiagram
     View->>User: Render final formatted response & auto-scroll
 ```
 
-#### Key Capabilities & Implementation Details:
+#### Key Capabilities & Design Details:
 
 1. **Server-Sent Events (SSE) Token Consumption**:
-   - Uses `@microsoft/fetch-event-source` or native `ReadableStream` on `fetch()` to consume `POST /api/v1/chat`.
+   - Consumes `POST /api/v1/chat` over standard HTTP chunked event streams.
    - Listens for discrete event channels:
      - `event: token`: Chunked textual tokens appended instantly to the message stream.
      - `event: citation`: Retrieval source provenance cards containing title, URL, chunk snippet, and similarity score.
@@ -84,9 +84,9 @@ sequenceDiagram
      - `event: error`: Surfaces inline error badges without tearing down conversation context.
      - `event: done`: Closes stream connection, records token metrics, and commits turn to local history.
 2. **Rich Typography & Syntax Highlighting**:
-   - **Markdown**: Rendered via `react-markdown` and `remark-gfm` (supporting tables, checklists, callouts).
-   - **LaTeX Mathematics**: Processed through `remark-math` and `rehype-katex` to render complex formulas ($E = mc^2$, matrix algebra, vector equations).
-   - **Syntax Highlighting**: Code fences parsed via `shiki` or `rehype-pretty-code` with dual light/dark theme support and copy-to-clipboard actions.
+   - **Markdown**: Formatted document rendering supporting CommonMark and GFM specifications (tables, checklists, callouts).
+   - **LaTeX Mathematics**: High-fidelity math typesetting for inline formulas ($E = mc^2$) and display blocks (matrix equations, algorithmic notation).
+   - **Syntax Highlighting**: Code blocks rendered with language tagging, line numbers, dual theme support, and 1-click clipboard copy actions.
 3. **Collapsible Source Citation Cards**:
    - Each cited vector document is rendered as a clean, collapsible pill or footer card at the bottom of the assistant's turn.
    - Expanding the card reveals the exact text chunk extracted from the vector store, similarity percentage, and direct link to the original URL.
@@ -108,22 +108,22 @@ flowchart TD
     C --> E[Trigger Sub-Second Toast: 'Saved! Will be searchable shortly.']
     D --> E
     E --> F[Clear Input Field Immediately]
-    F --> G[Dispatch POST /api/v1/ingest via TanStack Mutation]
+    F --> G[Dispatch POST /api/v1/ingest via Async Client Mutation]
     G --> H{Gateway Response}
     H -->|202 Accepted: status='queued'| I[Silent Success: Ingestion Proceeding Asynchronously]
     H -->|200 OK: status='already_indexed'| J[Update Toast: 'Content already indexed in brain']
     H -->|4xx / 5xx Error| K[Show Non-Intrusive Retry / Error Toast]
 ```
 
-#### Key Capabilities & Implementation Details:
+#### Key Capabilities & Design Details:
 
 1. **Fire-and-Forget Lean UX**:
    - In alignment with WikiMe's lean design principles, the user is never forced to wait for scraping, transcription, embedding, or vector indexing.
-   - Upon submitting an entry, the UI produces an optimistic toast notification using `sonner` in **< 200ms**: *"Saved! Will be searchable shortly."*
+   - Upon submitting an entry, the UI produces an optimistic toast notification in **< 200ms**: *"Saved! Will be searchable shortly."*
    - The input composer clears immediately, enabling continuous capture.
 2. **Polymorphic Ingestion DTO Dispatch**:
    - Analyzes input format: URLs trigger `SharePayloadDTO` (`content_type: "url"`), while free-form text triggers `ManualNoteDTO` (`content_type: "manual_note"`).
-   - Dispatches payload asynchronously in the background via TanStack Query mutation to `POST /api/v1/ingest`.
+   - Dispatches payload asynchronously in the background to `POST /api/v1/ingest`.
 3. **Graceful Failure Handling**:
    - If the network fails or the API Gateway returns an unrecoverable validation error, a toast badge notifies the user with a 1-click retry option without blocking current browsing.
 
@@ -185,7 +185,7 @@ flowchart TD
     G --> H[Item Successfully Indexed -> Removed from Dead Reports]
 ```
 
-#### Key Capabilities & Implementation Details:
+#### Key Capabilities & Design Details:
 - **Triage Listing**: Queries `GET /api/v1/dead-reports` to present all failed ingest operations filtered by authenticated user and workspace.
 - **Diagnostic Details**: Displays failure metadata, including HTTP status codes (e.g., `403 Forbidden`, `429 Too Many Requests`), scraper error traces, and original submission timestamps.
 - **Manual Text/Transcript Paste**: Offers an expandable text area where users can copy and paste raw article text, video transcripts, or excerpts directly from their browser.
@@ -195,18 +195,18 @@ flowchart TD
 
 ### 2.5 Local Session & Auth Store (`BrowserAuthStore`)
 
-`BrowserAuthStore` is a Zustand-powered client store encapsulating authentication state, token refresh lifecycles, and session routing.
+`BrowserAuthStore` is a centralized client store encapsulating authentication state, token refresh lifecycles, and session routing.
 
 #### Responsibilities:
 1. **JWT & Session Management**:
    - Stores short-lived access JWT in memory to mitigate XSS exposure.
-   - Supports HttpOnly refresh cookie rotation via the API Gateway.
-   - Generates and persists active `session_id` in `sessionStorage` to maintain multi-turn conversational context across page refreshes.
+   - Coordinates HttpOnly refresh cookie rotation via the API Gateway.
+   - Generates and persists active `session_id` in browser session storage to maintain multi-turn conversational context across page refreshes.
 2. **Multi-Tenant Context**:
    - Maintains active `org_id` and `workspace_id` state.
    - Automatically injects workspace contextual headers (`X-Workspace-Id`, `X-Org-Id`) into all outgoing API requests.
 3. **HTTP Interceptor Integration**:
-   - Intercepts all outgoing TanStack Query / Fetch requests to inject `Authorization: Bearer <JWT>`.
+   - Intercepts all outgoing client API requests to inject `Authorization: Bearer <JWT>`.
    - Intercepts incoming `401 Unauthorized` responses to trigger silent token refresh or redirect to login.
 
 ---
@@ -221,8 +221,8 @@ To prevent architectural drift and security vulnerabilities, engineers and agent
 ├──────────────────────────────────┬─────────────────────────────────────┤
 │       IN-SCOPE (ALLOWED)         │       FORBIDDEN (PROHIBITED)        │
 ├──────────────────────────────────┼─────────────────────────────────────┤
-│ ✓ Next.js 15 UI presentation     │ ✗ Direct PostgreSQL / DB connections│
-│ ✓ Tailwind / Radix UI styling    │ ✗ Direct Redis / BullMQ connections │
+│ ✓ Web client UI presentation     │ ✗ Direct PostgreSQL / DB connections│
+│ ✓ Responsive component styling   │ ✗ Direct Redis / BullMQ connections │
 │ ✓ Client-side form validation    │ ✗ Direct Qdrant / Pinecone queries  │
 │ ✓ Fetching /api/v1/* endpoints   │ ✗ Local LLM / Whisper execution     │
 │ ✓ SSE event stream parsing       │ ✗ Headless scraping / Playwright    │
@@ -238,4 +238,4 @@ To prevent architectural drift and security vulnerabilities, engineers and agent
 
 - [API Contracts & Schemas](API_CONTRACTS.md): Full schema definitions for all DTOs and endpoints referenced here.
 - [Implementation Roadmap](ROADMAP.md): Step-by-step checklist for building and verifying these components.
-- [Parent WikiMe Architecture](../../docs/PROGRESS.md): Architectural flow specifications (Flow A, Flow C, Flow D, Flow E, Flow F).
+- [Service Progress Tracker](PROGRESS.md): Active task checklists and progress status for `wikime-web`.

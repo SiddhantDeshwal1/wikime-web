@@ -20,28 +20,28 @@ This roadmap details the engineering checklist, technical deliverables, and veri
 
 ## 2. Actionable Implementation Steps
 
-### Step 7.1 [STEP_07_01]: Project Scaffold & Design System Initialization
-- [ ] Initialize Next.js 15+ App Router workspace with TypeScript (strict mode enabled).
-- [ ] Configure Tailwind CSS with `@tailwindcss/typography` and CSS variables for theming.
-- [ ] Install and configure Shadcn UI / Radix primitives (Button, Input, Textarea, Dialog, Drawer, Toast, Tooltip, DropdownMenu).
-- [ ] Implement responsive root layout with global navigation, sidebar drawer, and theme toggler.
+### Step 7.1 [STEP_07_01]: Project Scaffold & Design System Architecture
+- [ ] Initialize modular web client application structure and strict type environment.
+- [ ] Establish design tokens, typography scale, CSS variables, and dark/light theming foundation.
+- [ ] Implement accessible UI primitives and layout components (Button, Input, Textarea, Dialog, Drawer, Toast, Tooltip, DropdownMenu).
+- [ ] Implement responsive root shell with global navigation, collapsible sidebar drawer, and theme toggler.
 - [ ] Set up client environment configuration (`.env.local`) pointing to `NEXT_PUBLIC_API_GATEWAY_URL`.
 
 **Acceptance Criteria**:
-- Clean Next.js 15 layout renders on desktop and mobile viewports with zero console warnings.
+- Clean responsive layout renders on desktop and mobile viewports with zero console warnings.
 - Dark/light theme switching operates smoothly with zero flash of unstyled content (FOUC).
 
 ---
 
 ### Step 7.2 [STEP_07_02]: QuickCaptureBar & Optimistic Fire-and-Forget UX
 - [ ] Create `QuickCaptureBar` omnibar component accessible globally via keyboard shortcut (`Cmd/Ctrl + K` or floating action).
-- [ ] Implement automatic URL vs. plain-text regex classifier.
+- [ ] Implement automatic URL vs. plain-text classifier.
 - [ ] Construct payload DTOs:
   - URLs $\rightarrow$ `SharePayloadDTO` (`content_type: "url"`)
   - Plain text $\rightarrow$ `ManualNoteDTO` (`content_type: "manual_note"`)
-- [ ] Implement sub-second optimistic toast via `sonner` (< 200ms feedback): *"Saved! Will be searchable shortly."*
+- [ ] Implement sub-second optimistic toast (< 200ms feedback): *"Saved! Will be searchable shortly."*
 - [ ] Immediately clear input upon submission to enable continuous capturing without waiting for downstream indexing.
-- [ ] Wire background HTTP dispatch to `POST /api/v1/ingest` via TanStack Query mutation with silent retry policy.
+- [ ] Wire background HTTP dispatch to `POST /api/v1/ingest` via asynchronous client mutation with retry handling.
 
 **Acceptance Criteria**:
 - Omnibar dismisses or resets in under 200ms following Enter/Submit.
@@ -50,21 +50,21 @@ This roadmap details the engineering checklist, technical deliverables, and veri
 ---
 
 ### Step 7.3 [STEP_07_03]: Markdown, LaTeX Math & Code Syntax Engine
-- [ ] Configure `react-markdown` with `remark-gfm` for tables, task lists, and strikethrough.
-- [ ] Integrate `remark-math` and `rehype-katex` with KaTeX CSS for inline and display mathematical formulas.
-- [ ] Configure `shiki` or `rehype-pretty-code` for code blocks with language tagging, line numbers, and a 1-click copy button.
-- [ ] Style markdown prose using customized Tailwind Typography (`prose prose-slate dark:prose-invert max-w-none`).
+- [ ] Configure markdown parsing engine supporting CommonMark and GFM specifications (tables, task lists, strikethrough).
+- [ ] Integrate mathematical formula rendering engine supporting inline ($E = mc^2$) and display block mathematical notation.
+- [ ] Configure syntax-highlighted code block rendering with language tagging, line numbers, and a 1-click copy button.
+- [ ] Implement clean responsive prose typography styling across light and dark modes.
 
 **Acceptance Criteria**:
 - Formatted markdown renders correctly with zero layout shifts.
-- Mathematical formulas ($E = mc^2$, matrix notation) render crisply via KaTeX.
+- Mathematical formulas ($E = mc^2$, matrix notation) render crisply.
 - Code blocks highlight correctly across major programming languages (Python, TypeScript, SQL, Bash).
 
 ---
 
 ### Step 7.4 [STEP_07_04]: Conversational Chat View & SSE Token Streaming (`ChatStreamView`)
 - [ ] Implement `ChatStreamView` message container with autoscrolling pinned to bottom during active streaming.
-- [ ] Implement SSE client consumer using `@microsoft/fetch-event-source` or native `fetch` with `ReadableStream`.
+- [ ] Implement real-time Server-Sent Events (SSE) stream consumer handling chunked event transfer.
 - [ ] Handle discrete SSE event channels:
   - `event: token`: Incrementally append token chunks to current assistant message.
   - `event: citation`: Collect source provenance records into collapsible footer cards.
@@ -82,7 +82,7 @@ This roadmap details the engineering checklist, technical deliverables, and veri
 
 ### Step 7.5 [STEP_07_05]: Dead Reports Triage Dashboard (`TriageDashboard`)
 - [ ] Create `/triage` page route hosting the `TriageDashboard` component.
-- [ ] Fetch dead-letter scraping reports via `GET /api/v1/dead-reports` with TanStack Query.
+- [ ] Fetch dead-letter scraping reports via `GET /api/v1/dead-reports` with client data caching.
 - [ ] Render tabular view displaying failed URL, HTTP error code (e.g., 403, 429), failure timestamp, and retry attempts.
 - [ ] Build expandable manual transcript paste drawer with a multi-line textarea.
 - [ ] Wire submit button to `POST /api/v1/dead-reports/:id/resolve` with pasted `raw_text`.
@@ -114,11 +114,11 @@ This roadmap details the engineering checklist, technical deliverables, and veri
 ---
 
 ### Step 7.7 [STEP_07_07]: Authentication Store & Session Persistence (`BrowserAuthStore`)
-- [ ] Implement Zustand-based `BrowserAuthStore` with TypeScript interfaces.
+- [ ] Implement centralized `BrowserAuthStore` client session and authentication management with strict type interfaces.
 - [ ] Manage short-lived access JWT in memory; coordinate HttpOnly refresh cookies via gateway `/api/v1/auth/refresh`.
-- [ ] Persist active `session_id` in browser `sessionStorage` for conversational continuity across page reloads.
+- [ ] Persist active `session_id` in browser session storage for conversational continuity across page reloads.
 - [ ] Implement workspace and organization context switching (`workspace_id`, `org_id`).
-- [ ] Configure global fetch / Axios client interceptors to automatically attach `Authorization: Bearer <JWT>` and context headers.
+- [ ] Configure client HTTP interceptors to automatically attach `Authorization: Bearer <JWT>` and context headers.
 
 **Acceptance Criteria**:
 - Authenticated requests automatically include Bearer tokens and workspace headers.
@@ -130,6 +130,6 @@ This roadmap details the engineering checklist, technical deliverables, and veri
 
 1. All 7 steps (`STEP_07_01` through `STEP_07_07`) fully implemented, typed, and checked off.
 2. End-to-end integration verified against mock or live API Gateway endpoints (`/api/v1/*`).
-3. Zero TypeScript compiler errors (`pnpm tsc --noEmit`).
-4. Production build passes cleanly with zero linting or hydration errors (`pnpm build`).
+3. Zero type-checking compiler errors.
+4. Production build passes cleanly with zero linting or client hydration errors.
 5. Sub-second fire-and-forget ingestion response verified (< 200ms toast presentation).
